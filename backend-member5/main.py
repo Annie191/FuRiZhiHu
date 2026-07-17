@@ -3,12 +3,12 @@
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from routers import profile_router, report_router, statistics_router, trend_router
+from routers import report_router, statistics_router, trend_router
 
 app = FastAPI(
     title="伏日智护 · 成员5 画像分析 API",
     version="2.0.0",
-    description="用户画像分析、健康报告、数据统计、趋势分析 — SQLite 视图优先",
+    description="健康报告、综合概览、趋势分析 — SQLite 视图优先",
 )
 
 # ── 统一参数校验错误格式（Pydantic 422 → 我们的 {code, msg, data}）─────────
@@ -27,7 +27,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return JSONResponse(status_code=422, content={"code": 1002, "msg": msg, "data": None})
 
 
-app.include_router(profile_router.router, prefix="/api")
 app.include_router(report_router.router, prefix="/api")
 app.include_router(statistics_router.router, prefix="/api")
 app.include_router(trend_router.router, prefix="/api")
