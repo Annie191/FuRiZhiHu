@@ -595,3 +595,61 @@ npm run db:test
 
 - `npm test`：验证健康检查、认证、健康档案、食物库及饮食/饮水/运动/睡眠接口
 - `npm run db:test`：运行成员 2 提供的 SQLite 数据库回归测试
+
+## 十一、成员 5 后端交付内容（健康报告与趋势分析）
+
+已在项目下补充 `backend-member5` 目录，使用 Python FastAPI 实现，直接读取 `database/furicare.db`。
+
+### 11.1 项目结构
+
+```
+backend-member5/
+├── main.py                 # FastAPI 入口 + Pydantic 校验异常处理
+├── config.py               # SQLite 连接 + 统一响应格式 {code, msg, data}
+├── requirements.txt        # fastapi, uvicorn, numpy
+├── routers/
+│   ├── report_router.py    # B1 每日健康报告 / B2 每周健康报告
+│   ├── statistics_router.py # C4 Dashboard 综合概览
+│   └── trend_router.py     # D1 健康指数趋势 / D2 综合趋势总结
+├── services/
+│   └── trend_analyzer.py   # numpy 线性回归 + 综合评语生成
+├── utils/
+│   └── health_score.py     # 健康指数 → 等级（优秀/良好/一般/需改善）
+└── docs/api/               # 5 个接口详细文档
+```
+
+### 11.2 API 接口（5 个）
+
+| # | 方法 | 路径 | 说明 |
+|---|------|------|------|
+| B1 | GET | `/api/report/{user_id}/daily?date=` | 每日健康报告，含四维度拆解和等级 |
+| B2 | GET | `/api/report/{user_id}/weekly?start_date=&end_date=` | 每周健康报告，含趋势和自然语言总结 |
+| C4 | GET | `/api/statistics/{user_id}/overview?date=` | Dashboard 概览，四维度完成百分比 |
+| D1 | GET | `/api/trend/{user_id}/health-score?days=` | 健康指数趋势，numpy 线性回归判定上升/平稳/下降 |
+| D2 | GET | `/api/trend/{user_id}/summary?days=` | 综合趋势总结，五维度趋势 + AI 综合评语 |
+
+### 11.3 响应格式
+
+```json
+// 成功
+{ "code": 0, "msg": "ok", "data": { ... } }
+
+// 失败
+{ "code": 1001, "msg": "用户画像不存在，请先创建画像", "data": null }
+```
+
+### 11.4 启动方式
+
+```bash
+cd backend-member5
+pip install -r requirements.txt
+python -m uvicorn main:app --reload --port 8000
+```
+
+启动后访问 `http://localhost:8000/docs` 查看 Swagger 文档。
+
+### 11.5 与成员 3 的协作边界
+
+成员 3（Node.js）负责用户注册登录、画像 CRUD 和饮食/运动/饮水/睡眠的记录管理。本模块不重复实现这些功能，专注**健康报告、Dashboard 概览、趋势分析**三个分析层能力。
+
+两个服务独立运行在不同端口，通过 HTTP 调用，前端或网关负责路由分发。
