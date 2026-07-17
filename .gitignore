@@ -12,3 +12,4 @@ htmlcov/
 *.e2e.db
 *.e2e.db-wal
 *.e2e.db-shm
+*.egg-info/
