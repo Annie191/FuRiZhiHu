@@ -6,6 +6,7 @@
 
 - 数据库类型：`SQLite`
 - 数据库文件：`database/furicare.db`
+- 当前样例数据：`2 个用户，2026-07-11` 到 `2026-07-17` 连续 7 天，全模块覆盖
 - 初始化脚本：
   - `database/01_schema.sql`
   - `database/02_seed.sql`

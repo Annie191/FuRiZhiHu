@@ -24,6 +24,34 @@ class SQLiteDatabaseTestCase(unittest.TestCase):
         self.conn.close()
 
 
+class SeedCoverageTests(SQLiteDatabaseTestCase):
+    def test_full_week_seed_data_covers_two_users_and_all_modules(self) -> None:
+        row = self.conn.execute(
+            """
+            SELECT
+              (SELECT COUNT(*) FROM user_account) AS user_count,
+              (SELECT COUNT(*) FROM weather_daily) AS weather_count,
+              (SELECT COUNT(*) FROM daily_plan) AS plan_count,
+              (SELECT COUNT(*) FROM food_record) AS food_count,
+              (SELECT COUNT(*) FROM water_record) AS water_count,
+              (SELECT COUNT(*) FROM sport_record) AS sport_count,
+              (SELECT COUNT(*) FROM sleep_record) AS sleep_count,
+              (SELECT COUNT(*) FROM community_post) AS post_count,
+              (SELECT COUNT(DISTINCT plan_date) FROM daily_plan) AS plan_day_count
+            """
+        ).fetchone()
+
+        self.assertEqual(row["user_count"], 2)
+        self.assertEqual(row["weather_count"], 14)
+        self.assertEqual(row["plan_count"], 14)
+        self.assertEqual(row["food_count"], 84)
+        self.assertEqual(row["water_count"], 56)
+        self.assertEqual(row["sport_count"], 14)
+        self.assertEqual(row["sleep_count"], 14)
+        self.assertEqual(row["post_count"], 8)
+        self.assertEqual(row["plan_day_count"], 7)
+
+
 class Member1FrontendTests(SQLiteDatabaseTestCase):
     def test_dashboard_card_data_is_ready_for_homepage_rendering(self) -> None:
         row = self.conn.execute(
@@ -234,7 +262,7 @@ class Member4RecommendationTests(SQLiteDatabaseTestCase):
               exercise_advice, evening_advice, health_target_score, status
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (3, "2026-07-19", "鸡蛋 + 燕麦", "补水 600ml", "改为室内拉伸", "22:50 前休息", 92, "pending"),
+            (2, "2026-07-19", "鸡蛋 + 燕麦", "补水 600ml", "改为室内拉伸", "22:50 前休息", 92, "pending"),
         )
         self.conn.commit()
 
@@ -243,7 +271,7 @@ class Member4RecommendationTests(SQLiteDatabaseTestCase):
             SELECT wd.heat_risk, wd.advice, dp.exercise_advice, dp.health_target_score
             FROM weather_daily wd
             JOIN daily_plan dp ON dp.plan_date = wd.weather_date
-            WHERE wd.city = '南京' AND dp.user_id = 3 AND dp.plan_date = '2026-07-19'
+            WHERE wd.city = '南京' AND dp.user_id = 2 AND dp.plan_date = '2026-07-19'
             """
         ).fetchone()
 
@@ -260,7 +288,7 @@ class Member4RecommendationTests(SQLiteDatabaseTestCase):
                   exercise_advice, evening_advice, health_target_score, status
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (3, "2026-07-19", "重复计划", "重复计划", "重复计划", "重复计划", 60, "pending"),
+                (2, "2026-07-19", "重复计划", "重复计划", "重复计划", "重复计划", 60, "pending"),
             )
 
 
@@ -300,10 +328,10 @@ class Member5ProfileAnalysisTests(SQLiteDatabaseTestCase):
 
         self.assertEqual(row["nickname"], "张同学")
         self.assertEqual(row["profile_tag"], "夏季减脂型用户")
-        self.assertAlmostEqual(row["avg_sleep_quality"], 78.0, places=1)
-        self.assertAlmostEqual(row["total_burned"], 210.0, places=1)
+        self.assertAlmostEqual(row["avg_sleep_quality"], 78.57, places=2)
+        self.assertAlmostEqual(row["total_burned"], 1340.0, places=1)
         self.assertEqual(row["daily_water"], 1550)
-        self.assertEqual(row["post_count"], 1)
+        self.assertEqual(row["post_count"], 4)
 
 
 if __name__ == "__main__":

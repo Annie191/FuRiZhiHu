@@ -31,6 +31,7 @@ python database\init_sqlite.py
 ```
 
 默认会在 `database/furicare.db` 生成 SQLite 数据库文件。
+当前内置样例数据为 `2 个用户 × 7 天 × 全模块覆盖`，适合后端接口联调和前端页面演示。
 
 运行数据库测试：
 
