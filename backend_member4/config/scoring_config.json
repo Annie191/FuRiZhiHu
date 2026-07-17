@@ -1,0 +1,10 @@
+{
+  "algorithm_version": "1.0",
+  "weights": {
+    "water": 0.3,
+    "sport": 0.25,
+    "food": 0.25,
+    "sleep": 0.2
+  },
+  "sport_target_min": 30
+}
