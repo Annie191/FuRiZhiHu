@@ -1,17 +1,17 @@
 {
-  "name": "fucare-api",
+  "name": "fucare-express-rollback",
   "version": "1.0.0",
   "private": true,
-  "description": "伏日智护（FuCare）Express API",
+  "description": "FuCare legacy Express rollback implementation; use the root Python FastAPI service for active development.",
   "type": "module",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "dev": "nodemon src/server.js",
-    "start": "node src/server.js",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "legacy:dev": "nodemon src/server.js",
+    "legacy:start": "node src/server.js",
+    "legacy:test": "vitest run",
+    "legacy:test:watch": "vitest",
     "db:init": "python database/init_sqlite.py",
     "db:test": "python database/test_database_usage.py"
   },

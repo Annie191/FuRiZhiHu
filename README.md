@@ -403,7 +403,7 @@ THEN 降低运动强度并增加休息建议
 | --- | --- | --- |
 | 成员 1 | 前端负责人 | 负责 React 项目搭建、路由管理、全局布局设计（导航栏、侧边栏）、首页 Dashboard、健康评分展示以及公共组件封装 |
 | 成员 2 | 后端开发（数据库方向） | 负责 SQLite 数据库设计与建表，实现用户、饮食、运动、睡眠等核心数据表结构设计，完成数据库初始化、测试数据准备与数据维护 |
-| 成员 3 | 后端负责人（接口方向） | 负责 Node.js + Express 后端框架搭建，实现用户注册登录、JWT 身份认证，以及饮水、饮食、运动、睡眠、健康档案等页面所需的业务接口 |
+| 成员 3 | 后端负责人（接口方向） | 负责 Python + FastAPI 后端框架，实现用户注册登录、JWT 身份认证，以及饮水、饮食、运动、睡眠、健康档案等页面所需的业务接口 |
 | 成员 4 | 后端开发（推荐规则方向） | 负责健康评分算法、三伏养生推荐规则、天气数据处理，以及每日健康计划和推荐逻辑实现 |
 | 成员 5 | 后端开发（画像分析方向） | 负责用户画像分析、健康报告生成、数据统计接口，以及健康趋势分析等功能实现 |
 
@@ -430,30 +430,26 @@ THEN 降低运动强度并增加休息建议
 
 如果后续成员 3、4、5 继续开发后端接口和推荐逻辑，可以直接基于这套 SQLite 表结构联调。
 
-## 十、成员 3 后端接口交付内容
+## 十、成员 3 后端接口交付内容（Python FastAPI）
 
-已在项目根目录补充 Node.js + Express 后端基础框架，并完成用户认证模块，可直接连接 `database/furicare.db` 开展接口联调。
+成员 3 的正式后端服务位于 `backend-member3/`，使用 Python + FastAPI，并直接连接 `database/furicare.db`。它保留原 `/api/v1` 路径、Bearer JWT 鉴权、成功响应 `{ "data": ... }`（健康检查除外）和错误响应 `{ "error": { "code", "message", "details" } }`，前端无需因框架迁移修改调用。
+
+`src/`、根目录 `package.json` 和 `tests/` 仅作为短期 Express 回退参考；正式开发使用 Python 服务。Node 回退命令明确为 `npm run legacy:dev`、`npm run legacy:start` 与 `npm run legacy:test`。
 
 ### 10.1 后端基础框架
 
-- `package.json`：Node.js 项目依赖和常用脚本
-- `src/app.js`、`src/server.js`：Express 应用装配与服务启动入口
-- `src/config/env.js`、`.env.example`：环境变量加载与校验
-- `src/db/sqlite.js`：SQLite 连接工厂，自动开启外键约束
-- `src/middleware/`：统一错误响应、404 处理和 JWT 鉴权中间件
-- `src/routes/health.routes.js`：服务健康检查接口
+- `pyproject.toml`：成员 3 Python 项目元数据与开发依赖
+- `backend-member3/app/main.py`：FastAPI 应用与 `/api/v1` 路由入口
+- `backend-member3/app/config.py`、`backend-member3/app/db.py`：环境配置、SQLite 外键、WAL 与 busy timeout
+- `backend-member3/app/security.py`、`backend-member3/app/dependencies.py`：bcrypt、HS256 JWT 与当前用户依赖
+- `backend-member3/app/routers/`：健康检查、认证、食物库、资料及四类记录路由
+- `backend-member3/tests/`：成员 3 API 合同测试与成员 3—成员 5 隔离 SQLite 联调
 
-已提供接口：
-
-```text
-GET /api/v1/health
-```
-
-返回服务和 SQLite 数据库的就绪状态。
+服务会在启动时检查 `DATABASE_PATH`，注册会在 SQLite 事务中同时创建账号与健康档案；每条资料和记录访问均由 JWT 推导当前用户，跨用户单条记录统一返回 404。
 
 ### 10.2 用户注册、登录与 JWT 认证
 
-认证模块位于 `src/modules/auth/`，包含请求校验、业务逻辑、数据库访问和路由实现。
+认证模块位于 `backend-member3/app/routers/auth.py`，配合请求模型、数据库访问和安全工具实现。
 
 | 接口 | 方法 | 说明 |
 | --- | --- | --- |
@@ -487,7 +483,7 @@ GET /api/v1/health
 认证实现特点：
 
 - 用户账号和健康档案通过 SQLite 事务同时写入，避免产生不完整用户
-- 使用 `bcryptjs` 加密密码，接口不会返回明文密码或 `password_hash`
+- 使用 Python `bcrypt` 加密密码，接口不会返回明文密码或 `password_hash`
 - 使用 JWT Bearer Token 认证；受保护请求会重新检查账号状态，已禁用账号的旧 Token 自动失效
 - 对用户名、手机号、邮箱及健康档案执行严格校验；重复身份标识返回 `409`，错误凭据返回统一 `401`
 - 所有错误统一使用 `{ "error": { "code", "message", "details" } }` 格式，避免暴露 SQL 和敏感信息
@@ -574,27 +570,39 @@ Authorization: Bearer <accessToken>
 
 ### 10.5 运行与测试
 
-首次运行时安装依赖：
+从仓库根目录安装 Python 开发依赖：
 
 ```powershell
-npm install
+cd backend-member3
+python -m pip install -e ".[dev]"
 ```
 
-复制 `.env.example` 为 `.env` 后，配置 JWT 密钥并启动服务：
+复制 `.env.example` 为 `.env` 并设置安全的 `JWT_SECRET`。可使用 `DATABASE_PATH`、`HOST`、`PORT`、`JWT_EXPIRES_IN`、`CORS_ORIGIN`；相对 `DATABASE_PATH` 从仓库根目录解析。
+
+首次准备本地开发数据库：
 
 ```powershell
-npm run dev
+python database/init_sqlite.py
 ```
 
-可执行以下验证命令：
+此命令会重建数据库，只应对本地开发数据执行。正式启动成员 3 FastAPI 服务：
 
 ```powershell
-npm test
-npm run db:test
+cd backend-member3
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 3000
 ```
 
-- `npm test`：验证健康检查、认证、健康档案、食物库及饮食/饮水/运动/睡眠接口
-- `npm run db:test`：运行成员 2 提供的 SQLite 数据库回归测试
+执行验证：
+
+```powershell
+cd backend-member3
+python -m pytest tests
+python -m ruff check app
+cd ..
+python database/test_database_usage.py
+```
+
+成员 3 测试和成员 3—成员 5 联调会创建临时 SQLite 文件，不会写入已跟踪的 `database/furicare.db`。
 
 ## 十一、成员 5 后端交付内容（健康报告与趋势分析）
 
@@ -650,6 +658,4 @@ python -m uvicorn main:app --reload --port 8000
 
 ### 11.5 与成员 3 的协作边界
 
-成员 3（Node.js）负责用户注册登录、画像 CRUD 和饮食/运动/饮水/睡眠的记录管理。本模块不重复实现这些功能，专注**健康报告、Dashboard 概览、趋势分析**三个分析层能力。
-
-两个服务独立运行在不同端口，通过 HTTP 调用，前端或网关负责路由分发。
+成员 3（Python FastAPI）负责用户注册登录、画像 CRUD 和饮食/运动/饮水/睡眠的记录管理。本模块不重复实现这些功能，专注**健康报告、Dashboard 概览、趋势分析**三个分析层能力。两个服务独立运行在不同端口，通过 HTTP 调用，前端或网关负责路由分发。需要共享同一数据库时，为两个服务设置相同的绝对 `DATABASE_PATH`。
