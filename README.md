@@ -429,3 +429,169 @@ THEN 降低运动强度并增加休息建议
 - `daily_plan`：支撑每日养生计划生成与展示
 
 如果后续成员 3、4、5 继续开发后端接口和推荐逻辑，可以直接基于这套 SQLite 表结构联调。
+
+## 十、成员 3 后端接口交付内容
+
+已在项目根目录补充 Node.js + Express 后端基础框架，并完成用户认证模块，可直接连接 `database/furicare.db` 开展接口联调。
+
+### 10.1 后端基础框架
+
+- `package.json`：Node.js 项目依赖和常用脚本
+- `src/app.js`、`src/server.js`：Express 应用装配与服务启动入口
+- `src/config/env.js`、`.env.example`：环境变量加载与校验
+- `src/db/sqlite.js`：SQLite 连接工厂，自动开启外键约束
+- `src/middleware/`：统一错误响应、404 处理和 JWT 鉴权中间件
+- `src/routes/health.routes.js`：服务健康检查接口
+
+已提供接口：
+
+```text
+GET /api/v1/health
+```
+
+返回服务和 SQLite 数据库的就绪状态。
+
+### 10.2 用户注册、登录与 JWT 认证
+
+认证模块位于 `src/modules/auth/`，包含请求校验、业务逻辑、数据库访问和路由实现。
+
+| 接口 | 方法 | 说明 |
+| --- | --- | --- |
+| `/api/v1/auth/register` | POST | 注册用户账号和完整健康档案，成功后返回 JWT |
+| `/api/v1/auth/login` | POST | 使用用户名、手机号或邮箱及密码登录，返回 JWT |
+| `/api/v1/auth/me` | GET | 携带 Bearer Token 查询当前用户及健康档案 |
+
+注册请求示例：
+
+```json
+{
+  "username": "health_user",
+  "password": "a-secure-password",
+  "nickname": "健康同学",
+  "phone": "13800138003",
+  "email": "health@example.com",
+  "profile": {
+    "age": 24,
+    "gender": "female",
+    "heightCm": 165,
+    "weightKg": 55,
+    "goal": "maintain",
+    "activityLevel": "medium",
+    "avgSleepHours": 7.5,
+    "waterTargetMl": 2100,
+    "profileTag": "稳定作息型用户"
+  }
+}
+```
+
+认证实现特点：
+
+- 用户账号和健康档案通过 SQLite 事务同时写入，避免产生不完整用户
+- 使用 `bcryptjs` 加密密码，接口不会返回明文密码或 `password_hash`
+- 使用 JWT Bearer Token 认证；受保护请求会重新检查账号状态，已禁用账号的旧 Token 自动失效
+- 对用户名、手机号、邮箱及健康档案执行严格校验；重复身份标识返回 `409`，错误凭据返回统一 `401`
+- 所有错误统一使用 `{ "error": { "code", "message", "details" } }` 格式，避免暴露 SQL 和敏感信息
+
+### 10.3 健康管理业务接口
+
+已在成员 2 的 SQLite 数据表和统计视图基础上，补充健康档案、食物库、饮食、饮水、运动和睡眠页面所需接口。除食物库查询外，以下接口均需携带：
+
+```text
+Authorization: Bearer <accessToken>
+```
+
+接口从 JWT 自动识别当前用户，不接受客户端传入 `userId`；单条记录查询、修改和删除均按“记录 ID + 当前用户 ID”限制，避免跨用户读取或修改数据。
+
+#### 健康档案
+
+| 接口 | 方法 | 说明 |
+| --- | --- | --- |
+| `/api/v1/profile` | GET | 查询当前用户健康档案和数据库生成的 BMI |
+| `/api/v1/profile` | PATCH | 部分更新身高、体重、目标、饮水目标等健康档案字段 |
+
+更新身高或体重后，SQLite 会自动重新计算并返回 BMI。
+
+#### 食物库与饮食记录
+
+| 接口 | 方法 | 说明 |
+| --- | --- | --- |
+| `/api/v1/foods` | GET | 公开查询食物库，支持 `q`、`category`、`season` 和分页参数 |
+| `/api/v1/foods/:foodId` | GET | 查询单个食物详情 |
+| `/api/v1/food-records` | GET / POST | 查询或新增当前用户饮食记录 |
+| `/api/v1/food-records/:recordId` | GET / PATCH / DELETE | 查询、修改或删除当前用户的一条饮食记录 |
+| `/api/v1/food-records/daily-summary` | GET | 查询每日热量、蛋白质、水分和饮食健康评分汇总 |
+
+饮食记录会校验食物是否存在，并根据食物库单位限制 `per_100g` 食物使用 `g`、`per_100ml` 食物使用 `ml`。
+
+#### 饮水记录
+
+| 接口 | 方法 | 说明 |
+| --- | --- | --- |
+| `/api/v1/water-records` | GET / POST | 查询或新增当前用户饮水记录 |
+| `/api/v1/water-records/:recordId` | GET / PATCH / DELETE | 查询、修改或删除当前用户的一条饮水记录 |
+| `/api/v1/water-records/daily-summary` | GET | 查询每日总饮水量和饮水次数 |
+
+饮水记录包含水量、来源、摄入日期时间和备注；水量必须在 `50ml` 到 `3000ml` 之间。
+
+#### 运动记录
+
+| 接口 | 方法 | 说明 |
+| --- | --- | --- |
+| `/api/v1/sport-records` | GET / POST | 查询或新增当前用户运动记录 |
+| `/api/v1/sport-records/:recordId` | GET / PATCH / DELETE | 查询、修改或删除当前用户的一条运动记录 |
+| `/api/v1/sport-records/daily-summary` | GET | 查询每日总运动时长、消耗热量和运动次数 |
+
+运动记录支持运动类型、强度、时长、热量消耗、运动日期、开始时间和备注。
+
+#### 睡眠记录
+
+| 接口 | 方法 | 说明 |
+| --- | --- | --- |
+| `/api/v1/sleep-records` | GET / POST | 查询或新增当前用户睡眠记录 |
+| `/api/v1/sleep-records/:recordId` | GET / PATCH / DELETE | 查询、修改或删除当前用户的一条睡眠记录 |
+| `/api/v1/sleep-records/daily-summary` | GET | 查询每日睡眠时长和睡眠质量评分 |
+
+睡眠记录要求起床时间晚于入睡时间，且 `recordDate` 必须等于起床日期，确保按起床日统计睡眠数据。
+
+#### 查询参数约定
+
+记录列表和每日汇总接口支持以下查询参数：
+
+- `page`、`pageSize`：分页参数，默认第 `1` 页、每页 `20` 条，单页最大 `100` 条
+- `date=YYYY-MM-DD`：查询指定日期
+- `from=YYYY-MM-DD&to=YYYY-MM-DD`：查询包含起止日期的范围，最大 `366` 天
+
+`date` 不能与 `from`、`to` 同时使用；所有日期、日期时间和记录 ID 都会在接口层严格校验。
+
+### 10.4 协作边界
+
+成员 3 当前完成数据读取、记录管理和认证接口；以下职责仍由对应成员负责：
+
+- 成员 4：天气写入、健康评分规则、每日养生计划生成和推荐逻辑
+- 成员 5：健康报告、画像分析和长期趋势分析
+
+这样接口层可以直接使用成员 2 的数据结构和视图，而不会重复实现成员 4、5 的业务逻辑。
+
+### 10.5 运行与测试
+
+首次运行时安装依赖：
+
+```powershell
+npm install
+```
+
+复制 `.env.example` 为 `.env` 后，配置 JWT 密钥并启动服务：
+
+```powershell
+npm run dev
+```
+
+可执行以下验证命令：
+
+```powershell
+npm test
+npm run db:test
+```
+
+- `npm test`：验证健康检查、认证、健康档案、食物库及饮食/饮水/运动/睡眠接口
+- `npm run db:test`：运行成员 2 提供的 SQLite 数据库回归测试
