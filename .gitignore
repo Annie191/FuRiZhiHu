@@ -28,6 +28,17 @@ env/
 *.db-journal
 
 *.log
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.py[cod]
+*.coverage
+htmlcov/
+*.e2e.db
+*.e2e.db-wal
+*.e2e.db-shm
+*.egg-info/
 *.tmp
 *.bak
 *.swp
