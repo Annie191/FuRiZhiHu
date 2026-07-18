@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import sqlite3
+import logging
 from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
+
+logger = logging.getLogger(__name__)
 
 
 class ApiError(Exception):
@@ -49,7 +52,14 @@ def install_error_handlers(app: FastAPI) -> None:
         return error_response(ApiError(400, "VALIDATION_ERROR", "The submitted data violates a database constraint."))
 
     @app.exception_handler(sqlite3.Error)
-    async def handle_database_error(_: Request, __: sqlite3.Error) -> JSONResponse:
+    async def handle_database_error(request: Request, error: sqlite3.Error) -> JSONResponse:
+        logger.error(
+            "Database error while handling %s %s: %s",
+            request.method,
+            request.url.path,
+            error,
+            exc_info=(type(error), error, error.__traceback__),
+        )
         return error_response(ApiError(500, "INTERNAL_ERROR", "An unexpected error occurred."))
 
     @app.exception_handler(StarletteHTTPException)

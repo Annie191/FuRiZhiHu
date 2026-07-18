@@ -17,11 +17,10 @@ def get_db() -> sqlite3.Connection:
     path = resolve_database_path()
     if not path.exists():
         raise RuntimeError(f"Database file does not exist: {path}")
-    conn = sqlite3.connect(str(path), timeout=5)
+    conn = sqlite3.connect(str(path), timeout=5, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA busy_timeout = 5000")
-    conn.execute("PRAGMA journal_mode = WAL")
     return conn
 
 

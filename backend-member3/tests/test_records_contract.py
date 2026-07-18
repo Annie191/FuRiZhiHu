@@ -43,5 +43,7 @@ def test_record_date_queries_and_domain_boundaries(client, authenticated):
     error(invalid_water, 400, "VALIDATION_ERROR")
     invalid_range = client.get("/api/v1/water-records", headers=authenticated, params={"date": "2026-07-17", "from": "2026-07-01", "to": "2026-07-17"})
     error(invalid_range, 400, "VALIDATION_ERROR")
+    assert client.get("/api/v1/water-records", headers=authenticated, params={"from": "2026-07-01", "to": "2026-07-17"}).status_code == 200
+    assert client.get("/api/v1/water-records", headers=authenticated, params={"from_date": "2026-07-01", "to": "2026-07-17"}).status_code == 200
     invalid_sleep = client.post("/api/v1/sleep-records", headers=authenticated, json={"sleepTime": "2026-07-16 23:00:00", "wakeTime": "2026-07-17 07:00:00", "qualityScore": 100, "recordDate": "2026-07-16"})
     error(invalid_sleep, 400, "VALIDATION_ERROR")
