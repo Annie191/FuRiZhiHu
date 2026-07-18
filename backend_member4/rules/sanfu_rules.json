@@ -1,0 +1,200 @@
+[
+  {
+    "id": "extreme_heat_activity_veto",
+    "enabled": true,
+    "priority": 1000,
+    "when": {
+      "weather_assessment.risk_level": "extreme"
+    },
+    "then": {
+      "actions": [
+        {
+          "type": "veto",
+          "reason": "高温危险，暂停高强度活动；如出现意识异常、昏厥等症状，请立即呼叫急救。"
+        },
+        {
+          "type": "advice",
+          "slot": "exercise",
+          "text": "今日暂停高强度活动，优先停留在凉爽、通风的环境。"
+        }
+      ],
+      "veto": true
+    }
+  },
+  {
+    "id": "sanfu_elderly_hydration",
+    "enabled": true,
+    "priority": 100,
+    "when": {
+      "is_sanfu": true,
+      "user_profile.age": { ">=": 60 },
+      "weather.temperature_c": { ">=": 33 }
+    },
+    "then": {
+      "actions": [
+        {
+          "type": "advice",
+          "slot": "midday",
+          "text": "三伏高温期间建议少量多次饮水；如有心、肾疾病或医生要求限水，请遵医嘱。"
+        }
+      ],
+      "veto": false
+    }
+  },
+  {
+    "id": "sanfu_reduce_outdoor_high_temperature",
+    "enabled": true,
+    "priority": 95,
+    "when": {
+      "is_sanfu": true,
+      "weather.temperature_c": { ">=": 35 }
+    },
+    "then": {
+      "actions": [
+        {
+          "type": "advice",
+          "slot": "exercise",
+          "text": "三伏高温时避免 10:00-16:00 户外高强度运动，可改为室内或晚间轻度活动。"
+        }
+      ],
+      "veto": false
+    }
+  },
+  {
+    "id": "low_water_progress_alert",
+    "enabled": true,
+    "priority": 90,
+    "when": {
+      "and": [
+        { "current_hour": { ">=": 14 } },
+        { "metrics.water_ml": { "<": "user_profile.water_target_ml * 0.5" } }
+      ]
+    },
+    "then": {
+      "actions": [
+        {
+          "type": "advice",
+          "slot": "midday",
+          "text": "截至当前饮水进度偏低，建议结合个人饮水目标少量多次补充。"
+        }
+      ],
+      "veto": false
+    }
+  },
+  {
+    "id": "sleep_deficit_reduce_exertion",
+    "enabled": true,
+    "priority": 85,
+    "when": {
+      "and": [
+        { "has_sleep_record": true },
+        { "metrics.sleep_hours": { "<": 6 } }
+      ]
+    },
+    "then": {
+      "actions": [
+        {
+          "type": "advice",
+          "slot": "exercise",
+          "text": "昨晚睡眠不足，今日降低运动强度并适当增加休息。"
+        },
+        {
+          "type": "advice",
+          "slot": "evening",
+          "text": "今晚尽量提前休息，逐步恢复规律作息。"
+        }
+      ],
+      "veto": false
+    }
+  },
+  {
+    "id": "poor_air_quality_indoor_activity",
+    "enabled": true,
+    "priority": 80,
+    "when": {
+      "weather.air_quality_index": { ">=": 151 }
+    },
+    "then": {
+      "actions": [
+        {
+          "type": "advice",
+          "slot": "exercise",
+          "text": "空气质量较差，建议选择室内活动并减少长时间户外运动。"
+        }
+      ],
+      "veto": false
+    }
+  },
+  {
+    "id": "very_high_uv_protection",
+    "enabled": true,
+    "priority": 75,
+    "when": {
+      "weather.uv_index": { ">=": 8 }
+    },
+    "then": {
+      "actions": [
+        {
+          "type": "advice",
+          "slot": "midday",
+          "text": "紫外线很强，外出请使用遮阳措施并缩短暴晒时间。"
+        }
+      ],
+      "veto": false
+    }
+  },
+  {
+    "id": "lose_fat_meal_guidance",
+    "enabled": true,
+    "priority": 60,
+    "when": {
+      "user_profile.goal": "lose_fat"
+    },
+    "then": {
+      "actions": [
+        {
+          "type": "advice",
+          "slot": "breakfast",
+          "text": "减脂目标下早餐可优先选择全谷物、蔬果和适量优质蛋白。"
+        }
+      ],
+      "veto": false
+    }
+  },
+  {
+    "id": "gain_muscle_meal_guidance",
+    "enabled": true,
+    "priority": 60,
+    "when": {
+      "user_profile.goal": "gain_muscle"
+    },
+    "then": {
+      "actions": [
+        {
+          "type": "advice",
+          "slot": "breakfast",
+          "text": "增肌目标下早餐应包含主食和适量优质蛋白，并保证全天均衡摄入。"
+        }
+      ],
+      "veto": false
+    }
+  },
+  {
+    "id": "maintain_health_meal_guidance",
+    "enabled": true,
+    "priority": 55,
+    "when": {
+      "user_profile.goal": "maintain"
+    },
+    "then": {
+      "actions": [
+        {
+          "type": "advice",
+          "slot": "breakfast",
+          "text": "保持健康目标下，早餐注意主食、蛋白质和蔬果搭配。"
+        }
+      ],
+      "veto": false
+    }
+  }
+]
