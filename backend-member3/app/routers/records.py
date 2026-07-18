@@ -2,7 +2,7 @@ import sqlite3
 from dataclasses import dataclass
 from typing import Any, Type
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, create_model
 
 from ..dependencies import make_dependencies
@@ -84,6 +84,19 @@ def validate_domain(connection: sqlite3.Connection, kind: str, values: dict[str,
             raise ApiError(400, "VALIDATION_ERROR", f"Food amountUnit must be {expected}.")
 
 
+def parse_list_query(
+    page: int = Query(default=1, ge=1, le=10000),
+    page_size: int = Query(default=20, alias="pageSize", ge=1, le=100),
+    date: str | None = None,
+    from_value: str | None = Query(default=None, alias="from"),
+    from_date: str | None = None,
+    to: str | None = None,
+) -> ListQuery:
+    if from_value and from_date and from_value != from_date:
+        raise ApiError(400, "VALIDATION_ERROR", "Request validation failed.", [{"path": "from", "message": "from 与 from_date 不能不一致。"}])
+    return ListQuery(page=page, page_size=page_size, date=date, from_date=from_date or from_value, to=to)
+
+
 def router(settings) -> APIRouter:
     routes = APIRouter(tags=["records"])
     get_db, principal = make_dependencies(settings)
@@ -93,7 +106,7 @@ def router(settings) -> APIRouter:
         create = spec.input_model
         patch = patch_model(create)
 
-        def summaries(query: ListQuery = Depends(), user=Depends(principal), connection: sqlite3.Connection = Depends(get_db), _kind=kind, _spec=spec):
+        def summaries(query: ListQuery = Depends(parse_list_query), user=Depends(principal), connection: sqlite3.Connection = Depends(get_db), _kind=kind, _spec=spec):
             query.validate_range()
             clauses, values = ["user_id = ?"], [user["user_id"]]
             if query.date:
@@ -105,7 +118,7 @@ def router(settings) -> APIRouter:
             rows = connection.execute(f"SELECT * FROM {_spec.view} WHERE {' AND '.join(clauses)} ORDER BY {_spec.summary_date}", values).fetchall()
             return {"data": [map_summary(_kind, row) for row in rows]}
 
-        def list_records(query: ListQuery = Depends(), user=Depends(principal), connection: sqlite3.Connection = Depends(get_db), _kind=kind, _spec=spec):
+        def list_records(query: ListQuery = Depends(parse_list_query), user=Depends(principal), connection: sqlite3.Connection = Depends(get_db), _kind=kind, _spec=spec):
             query.validate_range()
             clauses, values = ["r.user_id = ?"], [user["user_id"]]
             field = _spec.date_column if _kind != "water" else "date(r.intake_time)"

@@ -3,7 +3,7 @@
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from routers import report_router, statistics_router, trend_router
+from routers import dashboard_router, frontend_data_router, report_router, statistics_router, trend_router
 
 app = FastAPI(
     title="伏日智护 · 成员5 画像分析 API",
@@ -30,6 +30,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 app.include_router(report_router.router, prefix="/api")
 app.include_router(statistics_router.router, prefix="/api")
 app.include_router(trend_router.router, prefix="/api")
+app.include_router(dashboard_router.router, prefix="/api")
+app.include_router(frontend_data_router.router, prefix="/api")
 
 
 @app.get("/")

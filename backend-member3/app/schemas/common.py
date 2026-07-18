@@ -48,7 +48,7 @@ class ListQuery(StrictModel):
     page: int = Field(default=1, ge=1, le=10000)
     page_size: int = Field(default=20, ge=1, le=100, validation_alias="pageSize", serialization_alias="pageSize")
     date: str | None = None
-    from_date: str | None = Field(default=None, validation_alias="from")
+    from_date: str | None = Field(default=None, alias="from")
     to: str | None = None
 
     def validate_range(self) -> None:

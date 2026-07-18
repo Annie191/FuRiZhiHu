@@ -8,12 +8,10 @@ from pathlib import Path
 
 def open_connection(database_path: str | Path) -> sqlite3.Connection:
     path = str(database_path)
-    connection = sqlite3.connect(path, timeout=5, isolation_level=None)
+    connection = sqlite3.connect(path, timeout=5, isolation_level=None, check_same_thread=False)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
     connection.execute("PRAGMA busy_timeout = 5000")
-    if path != ":memory:":
-        connection.execute("PRAGMA journal_mode = WAL")
     return connection
 
 
