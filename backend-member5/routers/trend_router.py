@@ -11,6 +11,15 @@ from services.trend_analyzer import calc_trend, generate_assessment
 router = APIRouter()
 
 
+def latest_window(db, user_id: int, days: int) -> tuple[date, date]:
+    row = db.execute(
+        "SELECT MAX(stat_date) AS latest_date FROM v_dashboard_daily WHERE user_id = ?",
+        (user_id,),
+    ).fetchone()
+    end_date = date.fromisoformat(row["latest_date"]) if row and row["latest_date"] else date.today()
+    return end_date - timedelta(days=days), end_date
+
+
 # ── D1：健康指数趋势 ────────────────────────────────────────────────────
 
 
@@ -19,9 +28,6 @@ def health_score_trend(
     user_id: int,
     days: int = Query(30, ge=7, le=90, description="统计天数，默认 30"),
 ):
-    end_date = date.today()
-    start_date = end_date - timedelta(days=days)
-
     db = get_db()
 
     profile = db.execute(
@@ -30,6 +36,8 @@ def health_score_trend(
     if not profile:
         db.close()
         return fail("用户画像不存在，请先创建画像", code=1001)
+
+    start_date, end_date = latest_window(db, user_id, days)
 
     rows = db.execute(
         """SELECT stat_date, health_score
@@ -103,9 +111,6 @@ def trend_summary(
     user_id: int,
     days: int = Query(30, ge=7, le=90, description="统计天数，默认 30"),
 ):
-    end_date = date.today()
-    start_date = end_date - timedelta(days=days)
-
     db = get_db()
 
     profile = db.execute(
@@ -114,6 +119,8 @@ def trend_summary(
     if not profile:
         db.close()
         return fail("用户画像不存在，请先创建画像", code=1001)
+
+    start_date, end_date = latest_window(db, user_id, days)
 
     rows = db.execute(
         """SELECT stat_date, health_score, water_ml, sport_duration_min,
@@ -125,7 +132,7 @@ def trend_summary(
     ).fetchall()
     db.close()
 
-    if len(rows) < 7:
+    if not rows:
         return success(
             {
                 "period": {"start": start_date.isoformat(), "end": end_date.isoformat()},
@@ -146,13 +153,16 @@ def trend_summary(
     sleep_quality_vals = [r["sleep_quality_score"] for r in rows]
     sleep_hours_vals = [r["sleep_hours"] for r in rows]
 
-    h_trend = calc_trend(health_scores)
-    w_trend = calc_trend(water_vals)
-    s_trend = calc_trend(sport_vals)
-    f_trend = calc_trend(food_vals)
-    sl_trend = calc_trend(sleep_quality_vals)
-
-    overall = generate_assessment(days, h_trend, s_trend, w_trend, sl_trend, f_trend)
+    if len(rows) < 7:
+        h_trend = w_trend = s_trend = f_trend = sl_trend = "数据不足"
+        overall = "有效数据不足7天，已展示现有记录统计。请持续记录健康数据。"
+    else:
+        h_trend = calc_trend(health_scores)
+        w_trend = calc_trend(water_vals)
+        s_trend = calc_trend(sport_vals)
+        f_trend = calc_trend(food_vals)
+        sl_trend = calc_trend(sleep_quality_vals)
+        overall = generate_assessment(days, h_trend, s_trend, w_trend, sl_trend, f_trend)
 
     return success(
         {

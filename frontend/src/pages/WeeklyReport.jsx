@@ -9,13 +9,12 @@ import StatCard from '../components/StatCard.jsx';
 import StateBlock from '../components/StateBlock.jsx';
 import UserSelect from '../components/UserSelect.jsx';
 import useAnalyticsUsers from '../hooks/useAnalyticsUsers.js';
-import { expandDates, recentRange, shortDate } from '../utils/date.js';
+import { expandDates, recentRange, shortDate, todayIso } from '../utils/date.js';
 
 export default function WeeklyReport() {
-  const { users, selectedUserId, setSelectedUserId, loadingUsers, userError } = useAnalyticsUsers();
-  const initialRange = useMemo(() => recentRange(7), []);
-  const [from, setFrom] = useState(initialRange.from);
-  const [to, setTo] = useState(initialRange.to);
+  const { users, selectedUser, selectedUserId, setSelectedUserId, loadingUsers, userError } = useAnalyticsUsers();
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -34,6 +33,13 @@ export default function WeeklyReport() {
     loadReport();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [from, selectedUserId, to]);
+
+  useEffect(() => {
+    const latestDate = selectedUser?.latest_date || todayIso();
+    const range = recentRange(7, latestDate);
+    setFrom(range.from);
+    setTo(range.to);
+  }, [selectedUser?.latest_date, selectedUserId]);
 
   const trendData = useMemo(() => {
     if (!report?.score_trend?.length) return [];

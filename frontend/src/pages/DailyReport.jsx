@@ -19,8 +19,8 @@ const colors = {
 };
 
 export default function DailyReport() {
-  const { users, selectedUserId, setSelectedUserId, loadingUsers, userError } = useAnalyticsUsers();
-  const [date, setDate] = useState(todayIso());
+  const { users, selectedUser, selectedUserId, setSelectedUserId, loadingUsers, userError } = useAnalyticsUsers();
+  const [date, setDate] = useState('');
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -39,6 +39,10 @@ export default function DailyReport() {
     loadReport();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date, selectedUserId]);
+
+  useEffect(() => {
+    setDate(selectedUser?.latest_date || todayIso());
+  }, [selectedUser?.latest_date, selectedUserId]);
 
   const radarData = useMemo(() => {
     const breakdown = report?.breakdown || {};
